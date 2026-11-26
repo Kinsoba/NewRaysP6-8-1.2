@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英単語チェックカード（修正版）</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --success: #10b981;
+    --success-bg: #d1fae5;
+    --warning: #f59e0b;
+    --warning-bg: #fef3c7;
+    --danger: #ef4444;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 16px;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  header h1 {
+    font-size: 1.45rem;
+  }
+
+  /* Stats Bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    background: var(--card);
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .stat-mastered .stat-num { color: var(--success); }
+  .stat-review .stat-num { color: var(--warning); }
+  .stat-unlearned .stat-num { color: var(--muted); }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+  }
+
+  .tab-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+
+  /* Controls */
+  .controls {
+    background: var(--card);
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .control-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  select {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 0.9rem;
+    background: #fff;
+    color: var(--text);
+  }
+
+  button.start-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 11px;
+    border-radius: 8px;
+    grid-column: 1 / -1;
+    font-size: 0.95rem;
+  }
+
+  button.start-btn:hover {
+    background: var(--primary-dark);
+  }
+
+  /* Card Meta & 3D Flip */
+  .card-panel {
+    background: var(--card);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .badge-unlearned { background: #f1f5f9; color: var(--muted); }
+  .badge-review { background: var(--warning-bg); color: #b45309; }
+  .badge-mastered { background: var(--success-bg); color: #047857; }
+
+  .flip-scene {
+    perspective: 1000px;
+    width: 100%;
+    height: 230px;
+    margin-bottom: 18px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .flip-card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .flip-card.is-flipped {
+    transform: rotateY(180deg);
+  }
+
+  .flip-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    text-align: center;
+    border: 2px solid var(--border);
+  }
+
+  .flip-front {
+    background: #f8fafc;
+  }
+
+  .flip-back {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    transform: rotateY(180deg);
+  }
+
+  .face-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .flip-back .face-tag {
+    color: var(--primary);
+  }
+
+  .face-main {
+    font-size: 1.7rem;
+    font-weight: 700;
+    word-break: break-word;
+  }
+
+  .tap-hint {
+    position: absolute;
+    bottom: 10px;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* Status Buttons */
+  .status-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .status-btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.88rem;
+    background: #fff;
+  }
+
+  .status-btn.active-review {
+    background: var(--warning);
+    color: #fff;
+    border-color: var(--warning);
+  }
+
+  .status-btn.active-mastered {
+    background: var(--success);
+    color: #fff;
+    border-color: var(--success);
+  }
+
+  /* Navigation */
+  .nav-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .nav-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .nav-btn.secondary {
+    background: #e2e8f0;
+    color: var(--text);
+  }
+
+  /* List View */
+  .list-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .list-controls input {
+    flex: 1;
+    min-width: 180px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .word-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .word-table th, .word-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+
+  .word-table th {
+    background: #f1f5f9;
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .mini-status-btn {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .reset-btn {
+    background: #fff;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>英単語チェックカード</h1>
+  </header>
+
+  <div class="stats-bar">
+    <div>
+      <span class="stat-num" id="stat-total">0</span>
+      <span class="stat-label">全単語数</span>
+    </div>
+    <div class="stat-mastered">
+      <span class="stat-num" id="stat-mastered">0</span>
+      <span class="stat-label">習得済み</span>
+    </div>
+    <div class="stat-review">
+      <span class="stat-num" id="stat-review">0</span>
+      <span class="stat-label">要復習</span>
+    </div>
+    <div class="stat-unlearned">
+      <span class="stat-num" id="stat-unlearned">0</span>
+      <span class="stat-label">未学習</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('card')">カード学習</button>
+    <button class="tab-btn" onclick="switchTab('list')">単語一覧・管理</button>
+  </div>
+
+  <div id="view-card">
+    <div class="controls">
+      <div class="control-group">
+        <label>出題モード（表 → 裏）</label>
+        <select id="direction-mode" onchange="startDeck()">
+          <option value="en2ja">英語 → 日本語</option>
+          <option value="ja2en">日本語 → 英語</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>出題対象</label>
+        <select id="filter-status">
+          <option value="all">すべて</option>
+          <option value="review">要復習のみ</option>
+          <option value="unmastered">未習得（未学習＋要復習）</option>
+          <option value="unlearned">未学習のみ</option>
+          <option value="mastered">習得済みのみ</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>範囲</label>
+        <select id="filter-section">
+          <option value="all">全範囲（1〜13枚目）</option>
+          <option value="1">1枚目（p.100 / p.102）</option>
+          <option value="2">2枚目（Factfulness 1）</option>
+          <option value="3">3枚目（Factfulness 2）</option>
+          <option value="4">4枚目（Factfulness 3）</option>
+          <option value="5">5枚目（Factfulness 4）</option>
+          <option value="6">6枚目（Factfulness 5）</option>
+          <option value="7">7枚目（Factfulness 6）</option>
+          <option value="8">8枚目（Factfulness 7）</option>
+          <option value="9">9枚目（Chapter 8 / p.132〜）</option>
+          <option value="10">10枚目（Chapter 8 続き1）</option>
+          <option value="11">11枚目（Chapter 8 続き2）</option>
+          <option value="12">12枚目（Chapter 8 続き3）</option>
+          <option value="13">13枚目（Chapter 8 続き4）</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>出題順</label>
+        <select id="order-mode">
+          <option value="random">ランダム</option>
+          <option value="sequential">順番通り</option>
+        </select>
+      </div>
+      <button class="start-btn" onclick="startDeck()">スタート / 条件を適用</button>
+    </div>
+
+    <div id="card-area"></div>
+  </div>
+
+  <div id="view-list" class="hidden">
+    <div class="list-controls">
+      <input type="text" id="search-input" placeholder="単語や意味で検索..." oninput="renderList()">
+      <select id="list-filter-status" onchange="renderList()">
+        <option value="all">すべての状態</option>
+        <option value="review">要復習</option>
+        <option value="mastered">習得済み</option>
+        <option value="unlearned">未学習</option>
+      </select>
+      <button class="reset-btn" onclick="resetAllProgress()">進捗を全リセット</button>
+    </div>
+    <table class="word-table">
+      <thead>
+        <tr>
+          <th>範囲</th>
+          <th>英語</th>
+          <th>日本語の意味</th>
+          <th>状態</th>
+        </tr>
+      </thead>
+      <tbody id="word-list-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const VOCAB_DATA = [
+  // 1枚目
+  { id: 1, sec: 1, secName: "1枚目", en: "bestseller", ja: "ベストセラー" },
+  { id: 2, sec: 1, secName: "1枚目", en: "statement", ja: "声明、陳述" },
+  { id: 3, sec: 1, secName: "1枚目", en: "Swedish", ja: "スウェーデン語（の）、スウェーデン人（の）" },
+  { id: 4, sec: 1, secName: "1枚目", en: "physician", ja: "医師、内科医" },
+  { id: 5, sec: 1, secName: "1枚目", en: "professor", ja: "教授" },
+  { id: 6, sec: 1, secName: "1枚目", en: "percentage", ja: "割合、パーセンテージ" },
+  { id: 7, sec: 1, secName: "1枚目", en: "primary", ja: "主な、初等の" },
+  { id: 8, sec: 1, secName: "1枚目", en: "proportion", ja: "割合、比率" },
+  { id: 9, sec: 1, secName: "1枚目", en: "double", ja: "2倍になる（する）" },
+  { id: 10, sec: 1, secName: "1枚目", en: "halve", ja: "半分にする（なる）" },
+  { id: 11, sec: 1, secName: "1枚目", en: "more or less", ja: "大体、およそ" },
+
+  // 2枚目
+  { id: 12, sec: 2, secName: "2枚目", en: "educated", ja: "教育を受けた、教養のある" },
+  { id: 13, sec: 2, secName: "2枚目", en: "mistaken", ja: "誤解した、間違った" },
+  { id: 14, sec: 2, secName: "2枚目", en: "aware", ja: "気づいている、意識している" },
+  { id: 15, sec: 2, secName: "2枚目", en: "instinct", ja: "本能、直感" },
+  { id: 16, sec: 2, secName: "2枚目", en: "limitation", ja: "限界、制限" },
+  { id: 17, sec: 2, secName: "2枚目", en: "negativity", ja: "否定性、悲観的な傾向" },
+  { id: 18, sec: 2, secName: "2枚目", en: "become aware of ...", ja: "〜に気づく" },
+
+  // 3枚目
+  { id: 19, sec: 3, secName: "3枚目", en: "on average", ja: "平均して" },
+  { id: 20, sec: 3, secName: "3枚目", en: "distinction", ja: "区別、違い" },
+  { id: 21, sec: 3, secName: "3枚目", en: "valid", ja: "妥当な、有効な" },
+  { id: 22, sec: 3, secName: "3枚目", en: "data", ja: "データ、資料" },
+  { id: 23, sec: 3, secName: "3枚目", en: "mortality", ja: "死亡率、死ぬこと" },
+  { id: 24, sec: 3, secName: "3枚目", en: "rate", ja: "率、速度" },
+
+  // 4枚目
+  { id: 25, sec: 4, secName: "4枚目", en: "clear-cut", ja: "はっきりした、明確な" },
+  { id: 26, sec: 4, secName: "4枚目", en: "gradual", ja: "段階的な、徐々に進む" },
+  { id: 27, sec: 4, secName: "4枚目", en: "accurate", ja: "正確な、的確な" },
+  { id: 28, sec: 4, secName: "4枚目", en: "incline", ja: "傾く、傾向がある" },
+  { id: 29, sec: 4, secName: "4枚目", en: "binary", ja: "2つの部分から成る、二進法の" },
+  { id: 30, sec: 4, secName: "4枚目", en: "distinct", ja: "明確に異なる、はっきりと別個の" },
+  { id: 31, sec: 4, secName: "4枚目", en: "intuitive", ja: "直感的な" },
+  { id: 32, sec: 4, secName: "4枚目", en: "dramatic", ja: "劇的な、印象的な" },
+  { id: 33, sec: 4, secName: "4枚目", en: "conflict", ja: "対立、葛藤" },
+  { id: 34, sec: 4, secName: "4枚目", en: "division", ja: "分割、対立" },
+  { id: 35, sec: 4, secName: "4枚目", en: "reality", ja: "現実、実態" },
+  { id: 36, sec: 4, secName: "4枚目", en: "be inclined to do", ja: "〜する傾向がある" },
+  { id: 37, sec: 4, secName: "4枚目", en: "divide A into B", ja: "AをBに分ける" },
+
+  // 5枚目
+  { id: 38, sec: 5, secName: "5枚目", en: "tendency", ja: "傾向、性向" },
+  { id: 39, sec: 5, secName: "5枚目", en: "majority", ja: "多数、過半数" },
+  { id: 40, sec: 5, secName: "5枚目", en: "expectancy", ja: "予期、期待" },
+  { id: 41, sec: 5, secName: "5枚目", en: "refer to ...", ja: "〜を指す、言及する" },
+  { id: 42, sec: 5, secName: "5枚目", en: "in reality", ja: "実際には、現実に" },
+  { id: 43, sec: 5, secName: "5枚目", en: "not necessarily", ja: "必ずしも〜とは限らない" },
+
+  // 6枚目
+  { id: 44, sec: 6, secName: "6枚目", en: "actual", ja: "実際の、現実の" },
+  { id: 45, sec: 6, secName: "6枚目", en: "gain", ja: "得る、増やす" },
+  { id: 46, sec: 6, secName: "6枚目", en: "viewer", ja: "視聴者、見る人" },
+  { id: 47, sec: 6, secName: "6枚目", en: "factor", ja: "要因、要素" },
+  { id: 48, sec: 6, secName: "6枚目", en: "logical", ja: "論理的な" },
+  { id: 49, sec: 6, secName: "6枚目", en: "advise", ja: "忠告する、助言する" },
+  { id: 50, sec: 6, secName: "6枚目", en: "alert", ja: "油断のない、警戒している" },
+  { id: 51, sec: 6, secName: "6枚目", en: "highlight", ja: "強調する、際立たせる" },
+  { id: 52, sec: 6, secName: "6枚目", en: "be rooted in ...", ja: "〜に根ざしている" },
+  { id: 53, sec: 6, secName: "6枚目", en: "that is", ja: "すなわち、つまり" },
+  { id: 54, sec: 6, secName: "6枚目", en: "advise O to do", ja: "Oに〜するよう助言する" },
+  { id: 55, sec: 6, secName: "6枚目", en: "be alert to ...", ja: "〜に気づいている、警戒している" },
+
+  // 7枚目
+  { id: 56, sec: 7, secName: "7枚目", en: "assume", ja: "仮定する、当然と思う" },
+  { id: 57, sec: 7, secName: "7枚目", en: "instance", ja: "例、事例" },
+  { id: 58, sec: 7, secName: "7枚目", en: "growth", ja: "成長、増加" },
+  { id: 59, sec: 7, secName: "7枚目", en: "curve", ja: "曲線、カーブ" },
+  { id: 60, sec: 7, secName: "7枚目", en: "flatten", ja: "平らにする（なる）" },
+  { id: 61, sec: 7, secName: "7枚目", en: "level", ja: "平らにする、水準を合わせる" },
+  { id: 62, sec: 7, secName: "7枚目", en: "for instance", ja: "たとえば" },
+  { id: 63, sec: 7, secName: "7枚目", en: "slow down", ja: "減速する、速度を落とす" },
+  { id: 64, sec: 7, secName: "7枚目", en: "be expected to do", ja: "〜することになっている、期待される" },
+  { id: 65, sec: 7, secName: "7枚目", en: "flatten out", ja: "横ばいになる、平らになる" },
+  { id: 66, sec: 7, secName: "7枚目", en: "level off", ja: "横ばいになる、落ち着く" },
+
+  // 8枚目
+  { id: 67, sec: 8, secName: "8枚目", en: "title", ja: "題名、肩書" },
+  { id: 68, sec: 8, secName: "8枚目", en: "dramatically", ja: "劇的に、著しく" },
+  { id: 69, sec: 8, secName: "8枚目", en: "based on ...", ja: "〜に基づいて" },
+
+  // 9枚目（修正版：Chapter 8 p.132 / p.133）
+  { id: 70, sec: 9, secName: "9枚目", en: "devote", ja: "捧げる" },
+  { id: 71, sec: 9, secName: "9枚目", en: "devote A to B", ja: "AをBに捧げる" },
+  { id: 72, sec: 9, secName: "9枚目", en: "inhabitant", ja: "住民" },
+  { id: 73, sec: 9, secName: "9枚目", en: "hunt", ja: "狩る、狩り" },
+  { id: 74, sec: 9, secName: "9枚目", en: "deer", ja: "シカ" },
+  { id: 75, sec: 9, secName: "9枚目", en: "belief", ja: "信念、信仰" },
+
+  // 10枚目（修正版）
+  { id: 76, sec: 10, secName: "10枚目", en: "vocational", ja: "職業の" },
+  { id: 77, sec: 10, secName: "10枚目", en: "discriminate", ja: "区別する、差別する" },
+  { id: 78, sec: 10, secName: "10枚目", en: "desire", ja: "願望、望む" },
+  { id: 79, sec: 10, secName: "10枚目", en: "entire", ja: "全体の、完全な" },
+
+  // 11枚目（修正版）
+  { id: 80, sec: 11, secName: "11枚目", en: "linguistics", ja: "言語学" },
+  { id: 81, sec: 11, secName: "11枚目", en: "folktale", ja: "民話、昔話" },
+  { id: 82, sec: 11, secName: "11枚目", en: "storyteller", ja: "語り手、物語作家" },
+  { id: 83, sec: 11, secName: "11枚目", en: "recite", ja: "暗唱する、朗読する" },
+  { id: 84, sec: 11, secName: "11枚目", en: "recitation", ja: "暗唱、朗読" },
+  { id: 85, sec: 11, secName: "11枚目", en: "be proud of ...", ja: "〜を誇りに思う" },
+  { id: 86, sec: 11, secName: "11枚目", en: "preservation", ja: "保存、保護" },
+  { id: 87, sec: 11, secName: "11枚目", en: "oral", ja: "口頭の、口述の" },
+  { id: 88, sec: 11, secName: "11枚目", en: "look down on ...", ja: "〜を見下す" },
+
+  // 12枚目（修正版）
+  { id: 89, sec: 12, secName: "12枚目", en: "heroic", ja: "英雄的な、勇敢な" },
+  { id: 90, sec: 12, secName: "12枚目", en: "epic", ja: "叙事詩、壮大な" },
+  { id: 91, sec: 12, secName: "12枚目", en: "Roman", ja: "ローマの、ローマ人" },
+  { id: 92, sec: 12, secName: "12枚目", en: "translate", ja: "翻訳する" },
+  { id: 93, sec: 12, secName: "12枚目", en: "fluent", ja: "流暢な" },
+  { id: 94, sec: 12, secName: "12枚目", en: "no matter what", ja: "何があっても、どんなに〜でも" },
+
+  // 13枚目（修正版）
+  { id: 95, sec: 13, secName: "13枚目", en: "accuracy", ja: "正確さ、精度" },
+  { id: 96, sec: 13, secName: "13枚目", en: "transcription", ja: "書き起こし、転写" },
+  { id: 97, sec: 13, secName: "13枚目", en: "flawless", ja: "欠点のない、完璧な" },
+  { id: 98, sec: 13, secName: "13枚目", en: "translation", ja: "翻訳、訳文" },
+  { id: 99, sec: 13, secName: "13枚目", en: "praise", ja: "称賛する、賞賛" },
+  { id: 100, sec: 13, secName: "13枚目", en: "oppose", ja: "反対する" },
+  { id: 101, sec: 13, secName: "13枚目", en: "determination", ja: "決意、固い決心" },
+  { id: 102, sec: 13, secName: "13枚目", en: "be impressed with ...", ja: "〜に感銘を受ける" }
+];
+
+const STORAGE_KEY = "vocab_card_progress_v2";
+let progress = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+let queue = [];
+let index = 0;
+let isFlipped = false;
+
+function saveProgress() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  updateStats();
+}
+
+function getStatus(id) {
+  return progress[id] || "unlearned";
+}
+
+function setStatus(id, status) {
+  if (status === "unlearned") {
+    delete progress[id];
+  } else {
+    progress[id] = status;
+  }
+  saveProgress();
+}
+
+function updateStats() {
+  const total = VOCAB_DATA.length;
+  let mastered = 0;
+  let review = 0;
+  VOCAB_DATA.forEach(item => {
+    const st = getStatus(item.id);
+    if (st === "mastered") mastered++;
+    else if (st === "review") review++;
+  });
+  const unlearned = total - mastered - review;
+
+  document.getElementById("stat-total").textContent = total;
+  document.getElementById("stat-mastered").textContent = mastered;
+  document.getElementById("stat-review").textContent = review;
+  document.getElementById("stat-unlearned").textContent = unlearned;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach((btn, idx) => {
+    btn.classList.toggle("active", (tab === "card" && idx === 0) || (tab === "list" && idx === 1));
+  });
+  document.getElementById("view-card").classList.toggle("hidden", tab !== "card");
+  document.getElementById("view-list").classList.toggle("hidden", tab !== "list");
+  if (tab === "list") renderList();
+}
+
+function shuffleArray(arr) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function startDeck() {
+  const statusFilter = document.getElementById("filter-status").value;
+  const sectionFilter = document.getElementById("filter-section").value;
+  const orderMode = document.getElementById("order-mode").value;
+
+  let filtered = VOCAB_DATA.filter(item => {
+    const st = getStatus(item.id);
+    if (statusFilter === "review" && st !== "review") return false;
+    if (statusFilter === "mastered" && st !== "mastered") return false;
+    if (statusFilter === "unlearned" && st !== "unlearned") return false;
+    if (statusFilter === "unmastered" && st === "mastered") return false;
+    if (sectionFilter !== "all" && String(item.sec) !== sectionFilter) return false;
+    return true;
+  });
+
+  if (orderMode === "random") {
+    filtered = shuffleArray(filtered);
+  }
+
+  queue = filtered;
+  index = 0;
+  isFlipped = false;
+  renderCard();
+}
+
+function toggleFlip() {
+  isFlipped = !isFlipped;
+  const cardEl = document.getElementById("flip-card");
+  if (cardEl) {
+    cardEl.classList.toggle("is-flipped", isFlipped);
+  }
+}
+
+function renderCard() {
+  const area = document.getElementById("card-area");
+
+  if (queue.length === 0) {
+    area.innerHTML = `<div class="card-panel empty-state">条件に一致する単語がありません。<br>上のフィルターを変更して「スタート / 条件を適用」を押してください。</div>`;
+    return;
+  }
+
+  if (index >= queue.length) {
+    area.innerHTML = `
+      <div class="card-panel" style="text-align:center;">
+        <h2>完了！</h2>
+        <p style="margin: 12px 0; color: var(--muted);">全 ${queue.length} 枚のカードを確認しました。</p>
+        <button class="start-btn" style="margin-top: 8px;" onclick="startDeck()">もう一度スタート</button>
+      </div>
+    `;
+    return;
+  }
+
+  const item = queue[index];
+  const status = getStatus(item.id);
+  const mode = document.getElementById("direction-mode").value;
+  const isEnToJa = mode === "en2ja";
+
+  const frontLabel = isEnToJa ? "英語" : "日本語";
+  const frontText = isEnToJa ? item.en : item.ja;
+  const backLabel = isEnToJa ? "日本語" : "英語";
+  const backText = isEnToJa ? item.ja : item.en;
+
+  const badgeMap = {
+    unlearned: `<span class="badge badge-unlearned">未学習</span>`,
+    review: `<span class="badge badge-review">要復習</span>`,
+    mastered: `<span class="badge badge-mastered">習得済み</span>`
+  };
+
+  area.innerHTML = `
+    <div class="card-panel">
+      <div class="card-meta">
+        <span>${item.secName} ／ ${index + 1} / ${queue.length}</span>
+        ${badgeMap[status]}
+      </div>
+
+      <div class="flip-scene" onclick="toggleFlip()">
+        <div class="flip-card ${isFlipped ? 'is-flipped' : ''}" id="flip-card">
+          <div class="flip-face flip-front">
+            <div class="face-tag">${frontLabel}</div>
+            <div class="face-main">${frontText}</div>
+            <div class="tap-hint">タップして答えを表示</div>
+          </div>
+          <div class="flip-face flip-back">
+            <div class="face-tag">${backLabel}</div>
+            <div class="face-main">${backText}</div>
+            <div class="tap-hint">タップして問題に戻る</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-actions">
+        <button class="status-btn ${status === 'review' ? 'active-review' : ''}" onclick="setCurrentStatus('review')">
+          ★ 要復習
+        </button>
+        <button class="status-btn ${status === 'mastered' ? 'active-mastered' : ''}" onclick="setCurrentStatus('mastered')">
+          ✓ 習得済み
+        </button>
+      </div>
+
+      <div class="nav-actions">
+        <button class="nav-btn secondary" ${index === 0 ? "disabled" : ""} onclick="prevCard()">← 前へ</button>
+        <button class="nav-btn" onclick="nextCard()">${index === queue.length - 1 ? "終了へ →" : "次へ →"}</button>
+      </div>
+    </div>
+  `;
+}
+
+function setCurrentStatus(targetStatus) {
+  const item = queue[index];
+  const current = getStatus(item.id);
+  setStatus(item.id, current === targetStatus ? "unlearned" : targetStatus);
+  renderCard();
+}
+
+function nextCard() {
+  index++;
+  isFlipped = false;
+  renderCard();
+}
+
+function prevCard() {
+  if (index > 0) {
+    index--;
+    isFlipped = false;
+    renderCard();
+  }
+}
+
+function renderList() {
+  const keyword = document.getElementById("search-input").value.trim().toLowerCase();
+  const statusFilter = document.getElementById("list-filter-status").value;
+  const tbody = document.getElementById("word-list-body");
+
+  const rows = VOCAB_DATA.filter(item => {
+    const st = getStatus(item.id);
+    if (statusFilter !== "all" && st !== statusFilter) return false;
+    if (keyword && !item.en.toLowerCase().includes(keyword) && !item.ja.includes(keyword)) return false;
+    return true;
+  }).map(item => {
+    const st = getStatus(item.id);
+    let btnLabel = "未学習";
+    let btnStyle = "background:#f1f5f9; color:#64748b;";
+    if (st === "review") {
+      btnLabel = "★ 要復習";
+      btnStyle = "background:#fef3c7; color:#b45309; border-color:#f59e0b;";
+    } else if (st === "mastered") {
+      btnLabel = "✓ 習得済み";
+      btnStyle = "background:#d1fae5; color:#047857; border-color:#10b981;";
+    }
+
+    return `
+      <tr>
+        <td style="color:#64748b; font-size:0.78rem;">${item.secName}</td>
+        <td><strong>${item.en}</strong></td>
+        <td>${item.ja}</td>
+        <td>
+          <button class="mini-status-btn" style="${btnStyle}" onclick="cycleListStatus(${item.id})">${btnLabel}</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  tbody.innerHTML = rows || `<tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">該当する単語がありません</td></tr>`;
+}
+
+function cycleListStatus(id) {
+  const order = ["unlearned", "review", "mastered"];
+  const next = order[(order.indexOf(getStatus(id)) + 1) % order.length];
+  setStatus(id, next);
+  renderList();
+}
+
+function resetAllProgress() {
+  if (confirm("すべての「習得済み」「要復習」の記録をリセットしますか？")) {
+    progress = {};
+    saveProgress();
+    renderList();
+  }
+}
+
+// 初期化
+updateStats();
+startDeck();
+</script>
+</body>
+</html>
